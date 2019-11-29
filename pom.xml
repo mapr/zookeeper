@@ -245,6 +245,12 @@
       <email>fangmin@apache.org</email>
       <timezone>-8</timezone>
     </developer>
+    <developer>
+        <id>eolivelli</id>
+        <name>Enrico Olivelli</name>
+        <email>eolivelli@apache.org</email>
+        <timezone>+1</timezone>
+    </developer>
   </developers>
 
   <profiles>
@@ -520,7 +526,15 @@
           <configuration>
             <releaseProfiles>apache-release</releaseProfiles>
             <arguments>-Dmaven.test.skip.exec ${arguments}</arguments>
+            <!-- update the version inside the C sources -->
+            <preparationGoals>antrun:run@replace-cclient-files-during-release scm:add@add-cclient-files-during-release scm:checkin@commit-cclient-files-during-release</preparationGoals>
+            <completionGoals>antrun:run@replace-cclient-files-during-release scm:add@add-cclient-files-during-release scm:checkin@commit-cclient-files-during-release</completionGoals>
           </configuration>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-scm-plugin</artifactId>
+          <version>1.11.2</version>
         </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
@@ -681,8 +695,47 @@
               </target>
             </configuration>
           </execution>
+          <execution>
+            <id>replace-cclient-files-during-release</id>
+            <phase>none</phase>
+            <goals>
+               <goal>run</goal>
+            </goals>
+            <configuration>
+               <target>
+                  <replaceregexp file="zookeeper-client/zookeeper-client-c/CMakeLists.txt" match="project.*" replace="project(zookeeper VERSION ${project.version)" byline="true" />
+                  <replaceregexp file="zookeeper-client/zookeeper-client-c/configure.ac" match="AC_INIT.*" replace="AC_INIT([zookeeper C client],${project.version},[user@zookeeper.apache.org],[zookeeper])" byline="true" />
+               </target>
+            </configuration>
+          </execution>
         </executions>
       </plugin>
+      <plugin>
+        <artifactId>maven-scm-plugin</artifactId>
+        <executions>
+           <execution>
+             <id>add-cclient-files-during-release</id>
+             <phase>none</phase>
+             <goals>
+               <goal>add</goal>
+             </goals>
+             <configuration>
+                <includes>zookeeper-client/zookeeper-client-c/CMakeLists.txt,zookeeper-client/zookeeper-client-c/configure.ac</includes>
+             </configuration>
+           </execution>
+           <execution>
+              <id>commit-cclient-files-during-release</id>
+              <phase>none</phase>
+              <goals>
+                  <!-- git commit -->
+                 <goal>checkin</goal>
+              </goals>
+              <configuration>
+                 <message>Released ${project.version}</message>
+              </configuration>
+            </execution>
+        </executions>
+    </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-jar-plugin</artifactId>
